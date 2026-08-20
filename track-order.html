@@ -41,6 +41,22 @@
   /* ── Glass card base ── */
   .card{background:var(--card-bg);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%);border:1px solid var(--glass-line);border-radius:18px;padding:18px;box-shadow:0 14px 32px rgba(12,12,13,0.16),inset 0 1px 0 rgba(255,255,255,0.06);}
 
+  /* ── Order-ID search card ── */
+  .track-search-title{font-size:16px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);margin-bottom:3px;}
+  .track-search-sub{font-size:12px;color:var(--text-sub);margin-bottom:14px;}
+  .track-search-row{display:flex;gap:8px;}
+  .track-search-field{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:var(--glass);border:1px solid var(--glass-line);border-radius:12px;padding:0 12px;height:44px;}
+  .track-search-field:focus-within{border-color:var(--line-strong);}
+  .track-search-field svg{width:16px;height:16px;color:var(--text-sub);flex-shrink:0;}
+  .track-search-field input{border:none;background:transparent;outline:none;flex:1;min-width:0;font-family:var(--font-body);font-size:14px;color:var(--ink);height:100%;}
+  .track-search-field input::placeholder{color:var(--muted);}
+  .track-search-btn{flex-shrink:0;padding:0 20px;height:44px;border-radius:12px;border:1px solid var(--white);background:var(--white);color:#0C0C0D;font-size:13px;font-weight:700;}
+  .track-search-btn:hover{background:#E8E8EA;border-color:#E8E8EA;}
+  .track-search-error{display:none;font-size:12px;color:var(--danger);margin-top:10px;}
+  .track-search-error.show{display:block;}
+  .track-results{display:flex;flex-direction:column;gap:20px;}
+  .track-results[hidden]{display:none;}
+
   /* ── Order identity ── */
   .order-identity{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
   .oi-left{}
@@ -495,7 +511,7 @@
     background:rgba(255,255,255,0.98); border-bottom:1px solid transparent;
     transition:max-height 0.3s ease, border-color 0.2s ease;
   }
-  .search-panel.open{ max-height:520px; border-bottom-color:var(--line); }
+  .search-panel.open{ max-height:400px; border-bottom-color:var(--line); }
   .search-panel-inner{ max-width:680px; margin:0 auto; padding:16px 20px 20px; }
   .search-bar-row{ display:flex; align-items:center; gap:8px; }
   .search-input-wrap{
@@ -1810,18 +1826,39 @@
     </button>
   </div>
 
-  <!-- Order Identity card -->
-  <div class="card" id="identityCard">
-    <div style="display:flex;align-items:center;justify-content:center;padding:20px;"><div class="spinner"></div></div>
+  <!-- Order-ID search card -->
+  <div class="card" id="searchCard">
+    <div class="track-search-title">Track Your Order</div>
+    <div class="track-search-sub">Enter your Order ID to see live tracking status.</div>
+    <form id="trackSearchForm" novalidate>
+      <div class="track-search-row">
+        <div class="track-search-field">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="trackOrderIdInput" type="text" placeholder="e.g. ORD-38199" autocomplete="off">
+        </div>
+        <button type="submit" class="track-search-btn">Track</button>
+      </div>
+      <div class="track-search-error" id="trackSearchError">Please enter a valid Order ID.</div>
+    </form>
   </div>
 
-  <!-- Pipeline card -->
-  <div class="card" id="pipelineCard" style="display:none;">
-    <div class="pipeline" id="pipeline"></div>
-  </div>
+  <!-- Tracking result cards (hidden until an Order ID is submitted) -->
+  <div class="track-results" id="trackResults" hidden>
 
-  <!-- Tracking card -->
-  <div class="card" id="trackingCard" style="display:none;"></div>
+    <!-- Order Identity card -->
+    <div class="card" id="identityCard">
+      <div style="display:flex;align-items:center;justify-content:center;padding:20px;"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Pipeline card -->
+    <div class="card" id="pipelineCard" style="display:none;">
+      <div class="pipeline" id="pipeline"></div>
+    </div>
+
+    <!-- Tracking card -->
+    <div class="card" id="trackingCard" style="display:none;"></div>
+
+  </div>
 
 </div>
 
@@ -1902,12 +1939,11 @@
   /* ═══════════════════════════════════════════════
      MAIN INIT
   ═══════════════════════════════════════════════ */
-  (function(){
-    var params = new URLSearchParams(window.location.search);
-    var orderId       = params.get('orderId')       || 'ORD-38199';
-    var consignmentId = params.get('consignmentId') || 'STF-00482911';
-    var courier       = params.get('courier')       || 'Steadfast';
-    var status        = params.get('status')        || 'shipped';
+  function runTracking(orderId, consignmentId, courier, status){
+    var searchCard = document.getElementById('searchCard');
+    var results = document.getElementById('trackResults');
+    searchCard.style.display = 'none';
+    results.hidden = false;
 
     renderIdentity(orderId, status, consignmentId, courier);
     renderPipeline(status);
@@ -1916,6 +1952,36 @@
       loadTracking(orderId, consignmentId, courier, status);
     } else {
       renderInactive(status);
+    }
+  }
+
+  (function(){
+    var params = new URLSearchParams(window.location.search);
+    var orderIdParam = params.get('orderId');
+
+    var form = document.getElementById('trackSearchForm');
+    var input = document.getElementById('trackOrderIdInput');
+    var errorEl = document.getElementById('trackSearchError');
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = input.value.trim();
+      if(!val){
+        errorEl.classList.add('show');
+        input.closest('.track-search-field').style.borderColor = 'var(--danger)';
+        return;
+      }
+      errorEl.classList.remove('show');
+      runTracking(val, 'STF-00482911', 'Steadfast', 'shipped');
+    });
+
+    // If an Order ID was already passed in the URL (e.g. from Order History), skip the search step.
+    if(orderIdParam){
+      var consignmentId = params.get('consignmentId') || 'STF-00482911';
+      var courier       = params.get('courier')       || 'Steadfast';
+      var status        = params.get('status')        || 'shipped';
+      input.value = orderIdParam;
+      runTracking(orderIdParam, consignmentId, courier, status);
     }
   })();
 

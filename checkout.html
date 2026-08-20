@@ -103,6 +103,16 @@
   .co-input:focus, .co-select:focus{ outline:none; border-color:var(--ink); }
   .co-input:disabled{ background:var(--canvas); color:var(--steel); cursor:not-allowed; }
   .co-input.autofill{ background:rgba(61,190,100,0.06); border-color:rgba(61,190,100,0.4); }
+  /* Kill the browser's native autofill background (white/yellow tint) so it matches our field style */
+  .co-input:-webkit-autofill,
+  .co-input:-webkit-autofill:hover,
+  .co-input:-webkit-autofill:focus{
+    -webkit-text-fill-color:var(--ink);
+    -webkit-box-shadow:0 0 0px 1000px var(--white) inset;
+    box-shadow:0 0 0px 1000px var(--white) inset;
+    caret-color:var(--ink);
+    transition:background-color 9999s ease-in-out 0s;
+  }
 
   .co-select-wrap{ position:relative; }
   .co-select-wrap svg{
@@ -801,7 +811,7 @@
     background:rgba(255,255,255,0.98); border-bottom:1px solid transparent;
     transition:max-height 0.3s ease, border-color 0.2s ease;
   }
-  .search-panel.open{ max-height:520px; border-bottom-color:var(--line); }
+  .search-panel.open{ max-height:400px; border-bottom-color:var(--line); }
   .search-panel-inner{ max-width:680px; margin:0 auto; padding:16px 20px 20px; }
   .search-bar-row{ display:flex; align-items:center; gap:8px; }
   .search-input-wrap{

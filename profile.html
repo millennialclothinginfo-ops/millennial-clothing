@@ -45,7 +45,7 @@
 
   /* ---- Mobile: minimal hero — image left, name & email middle, edit button right ---- */
   @media (max-width:759px){
-    .card.profile-top{ padding:12px 14px; }
+    .card.profile-top{ padding:12px 14px; flex-wrap:wrap; }
     .profile-top{ flex-direction:row; align-items:center; text-align:left; gap:10px; }
     .avatar-wrap{ margin-bottom:0; flex-shrink:0; }
     .avatar{ width:44px; height:44px; }
@@ -56,6 +56,8 @@
     .p-email{ font-size:11px; margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .profile-actions{ margin-top:0; flex-shrink:0; width:auto; max-width:none; gap:6px; }
     .action-btn{ padding:6px 12px; font-size:10.5px; border-radius:10px; }
+    /* Force the edit form onto its own full-width row, below the avatar/name/actions row above */
+    .edit-form{ flex-basis:100%; max-width:none; margin:0; }
     .edit-form.open{ margin-top:14px; }
   }
 
@@ -66,6 +68,16 @@
   .ef-field{ margin-bottom:12px; }
   .ef-field input, .ef-field select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--canvas); font-size:13.5px; color:var(--ink); }
   .ef-field input:focus, .ef-field select:focus{ outline:none; border-color:var(--accent); background:#fff; }
+  /* Kill the browser's native autofill background (white/yellow tint) so it matches our field style */
+  .ef-field input:-webkit-autofill,
+  .ef-field input:-webkit-autofill:hover,
+  .ef-field input:-webkit-autofill:focus{
+    -webkit-text-fill-color:var(--ink);
+    -webkit-box-shadow:0 0 0px 1000px var(--canvas) inset;
+    box-shadow:0 0 0px 1000px var(--canvas) inset;
+    caret-color:var(--ink);
+    transition:background-color 9999s ease-in-out 0s;
+  }
   .ef-row{ display:flex; gap:10px; margin-top:14px; }
   .ef-save{ flex:1; padding:10px; border-radius:10px; border:none; background:var(--ink); color:#fff; font-size:13px; font-weight:600; }
   .ef-cancel{ flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:none; color:var(--ink); font-size:13px; font-weight:600; }
@@ -600,7 +612,7 @@
     background:rgba(255,255,255,0.98); border-bottom:1px solid transparent;
     transition:max-height 0.3s ease, border-color 0.2s ease;
   }
-  .search-panel.open{ max-height:520px; border-bottom-color:var(--line); }
+  .search-panel.open{ max-height:400px; border-bottom-color:var(--line); }
   .search-panel-inner{ max-width:680px; margin:0 auto; padding:16px 20px 20px; }
   .search-bar-row{ display:flex; align-items:center; gap:8px; }
   .search-input-wrap{

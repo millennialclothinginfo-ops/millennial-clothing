@@ -9,20 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=block" rel="stylesheet">
 <style>
   :root{
-    /* Off-white page canvas + matte black glass cards */
-    --ink:#F5F5F7;
+    /* Off-white page canvas + white-transparent glass cards */
+    --ink:#131316;
     --canvas:#F4F3EF;
     --white:#FFFFFF;
-    --text-sub:rgba(245,245,247,0.54);
-    --muted:rgba(245,245,247,0.38);
-    --line:rgba(245,245,247,0.14);
-    --line-strong:rgba(245,245,247,0.26);
-    --glass:rgba(255,255,255,0.06);
-    --glass-strong:rgba(255,255,255,0.12);
-    --glass-line:rgba(255,255,255,0.16);
-    --card-bg:rgba(12,12,13,0.82);
+    --text-sub:rgba(19,19,22,0.56);
+    --muted:rgba(19,19,22,0.38);
+    --line:rgba(19,19,22,0.10);
+    --line-strong:rgba(19,19,22,0.20);
+    --glass:rgba(19,19,22,0.045);
+    --glass-strong:rgba(19,19,22,0.08);
+    --glass-line:rgba(19,19,22,0.12);
+    --card-bg:rgba(255,255,255,0.55);
     --danger:#E5766B;
-    --success:#5CD088;
+    --success:#3FA968;
     --font-body:'Inter','Helvetica Neue',Arial,sans-serif;
   }
   *{box-sizing:border-box; margin:0; padding:0; font-family:inherit;}
@@ -53,10 +53,10 @@
   }
 
   /* select box floats top-left, overlapping the card corner */
-  .select-box{ position:absolute; top:-7px; left:-7px; width:24px; height:24px; border-radius:8px; border:1.5px solid var(--glass-line); background:#0C0C0D; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(12,12,13,0.25); }
+  .select-box{ position:absolute; top:-7px; left:-7px; width:24px; height:24px; border-radius:8px; border:1.5px solid var(--glass-line); background:var(--white); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(19,19,22,0.12); }
   .select-box svg{ width:12px; height:12px; color:transparent; }
   .select-box.checked{ background:var(--ink); border-color:var(--ink); }
-  .select-box.checked svg{ color:#0C0C0D; }
+  .select-box.checked svg{ color:var(--white); }
 
   /* Row 1 block: image left, detail rows right */
   .card-top{ display:flex; gap:11px; padding-left:8px; }
@@ -92,7 +92,7 @@
 
   .card-divider{ height:1px; background:var(--line); margin:12px 0 10px; }
 
-  /* Bottom row: Payment Summary toggle (left) + Checkout button (right) */
+  /* Bottom row: Payment Summary toggle */
   .card-bottom-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
 
   .ps-toggle{ display:flex; align-items:center; gap:6px; background:none; border:none; padding:6px 4px; color:var(--text-sub); }
@@ -100,8 +100,9 @@
   .ps-chevron{ width:12px; height:12px; transition:transform .2s ease; flex-shrink:0; }
   .cart-card.ps-open .ps-chevron{ transform:rotate(180deg); }
 
-  .btn-item-checkout{ padding:9px 22px; border-radius:20px; border:1px solid var(--white); background:var(--white); color:#0C0C0D; font-size:12px; font-weight:700; }
-  .btn-item-checkout:hover{ background:#E8E8EA; border-color:#E8E8EA; }
+  .btn-item-checkout{ padding:9px 22px; border-radius:20px; border:1px solid var(--ink); background:var(--ink); color:var(--white); font-size:12px; font-weight:700; }
+  .btn-item-checkout:hover{ background:#2A2A2E; border-color:#2A2A2E; }
+  .btn-item-checkout-bottom{ width:100%; margin-top:12px; padding:11px 22px; }
 
   .ps-details{ margin-top:10px; padding:10px 11px; border-radius:11px; background:var(--glass); border:1px solid var(--glass-line); display:flex; flex-direction:column; gap:6px; }
   .ps-details[hidden]{ display:none; }
@@ -117,8 +118,8 @@
   .bulk-count b{ color:var(--ink); font-weight:800; font-size:13.5px; margin-right:4px; }
   .btn-cancel-sel{ flex-shrink:0; padding:10px 16px; border-radius:11px; border:1px solid var(--glass-line); background:var(--glass); color:var(--text-sub); font-size:12.5px; font-weight:600; }
   .btn-cancel-sel:hover{ border-color:var(--line-strong); color:var(--ink); }
-  .btn-checkout-sel{ flex-shrink:0; padding:10px 20px; border-radius:11px; border:1px solid var(--white); background:var(--white); color:#0C0C0D; font-size:12.5px; font-weight:700; }
-  .btn-checkout-sel:hover{ background:#E8E8EA; border-color:#E8E8EA; }
+  .btn-checkout-sel{ flex-shrink:0; padding:10px 20px; border-radius:11px; border:1px solid var(--ink); background:var(--ink); color:var(--white); font-size:12.5px; font-weight:700; }
+  .btn-checkout-sel:hover{ background:#2A2A2E; border-color:#2A2A2E; }
 
   .empty-state{ text-align:center; padding:70px 20px; }
   .empty-state svg{ width:40px; height:40px; color:rgba(19,19,22,0.22); margin-bottom:12px; }
@@ -492,7 +493,7 @@
     background:rgba(255,255,255,0.98); border-bottom:1px solid transparent;
     transition:max-height 0.3s ease, border-color 0.2s ease;
   }
-  .search-panel.open{ max-height:520px; border-bottom-color:var(--line); }
+  .search-panel.open{ max-height:400px; border-bottom-color:var(--line); }
   .search-panel-inner{ max-width:680px; margin:0 auto; padding:16px 20px 20px; }
   .search-bar-row{ display:flex; align-items:center; gap:8px; }
   .search-input-wrap{
@@ -1911,13 +1912,14 @@
             '<span class="ps-toggle-label">Payment Summary</span>' +
             CHEVRON_SVG +
           '</button>' +
-          '<button type="button" class="btn-item-checkout">Checkout</button>' +
         '</div>' +
 
         '<div class="ps-details"' + (it.psOpen ? '' : ' hidden') + '>' +
           '<div class="ps-row"><span class="ps-label">Price</span><span class="ps-value">' + money(lineSubtotal) + '</span></div>' +
           '<div class="ps-row discount"><span class="ps-label">Discount</span><span class="ps-value">-' + money(lineDiscount) + '</span></div>' +
-        '</div>';
+        '</div>' +
+
+        '<button type="button" class="btn-item-checkout btn-item-checkout-bottom">Checkout</button>';
 
       card.querySelector('.select-box').addEventListener('click', function(){
         it.selected = !it.selected;
