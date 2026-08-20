@@ -160,7 +160,7 @@
       </span>
     </div>
     <h1 class="auth-heading">Welcome Back</h1>
-    <p class="auth-signup">Don't have an account yet? <a href="#">Sign Up</a></p>
+    <p class="auth-signup">Don't have an account yet? <a href="signup.html">Sign Up</a></p>
 
     <form id="loginForm" novalidate>
       <div class="field-group">
@@ -192,7 +192,7 @@
           </span>
           <span>Remember Me</span>
         </label>
-        <a class="forgot-link" href="#">Forget Password?</a>
+        <a class="forgot-link" href="forgot-password.html">Forget Password?</a>
       </div>
 
       <button type="submit" class="login-btn">Log In</button>
@@ -234,10 +234,20 @@
     });
   })();
 
+  // If already logged in (demo session), skip straight to the profile page.
+  (function(){
+    var qpLoggedIn = new URLSearchParams(window.location.search).get('loggedin') === '1';
+    var lsLoggedIn = localStorage.getItem('demoLoggedIn') === '1';
+    if((qpLoggedIn || lsLoggedIn) && !new URLSearchParams(window.location.search).get('switch')){
+      window.location.href = 'profile.html';
+    }
+  })();
+
   document.getElementById('loginForm').addEventListener('submit', function(e){
     e.preventDefault();
-    // Demo: simulate a successful login and land on the site home.
-    window.location.href = 'index.html';
+    // Demo: simulate a successful login and land on the profile page.
+    localStorage.setItem('demoLoggedIn', '1');
+    window.location.href = 'profile.html';
   });
 </script>
 
