@@ -1938,7 +1938,7 @@
         renderCart();
       });
       card.querySelector('.btn-item-checkout').addEventListener('click', function(){
-        // Hook up single-item checkout navigation here.
+        window.location.href = 'checkout.html?item=' + encodeURIComponent(it.id != null ? it.id : '');
       });
 
       page.appendChild(card);
@@ -1965,7 +1965,8 @@
         renderCart();
       });
       bar.querySelector('.btn-checkout-sel').addEventListener('click', function(){
-        // Hook up multi-item checkout navigation here.
+        var ids = sel.map(function(it){ return it.id; }).join(',');
+        window.location.href = 'checkout.html?items=' + encodeURIComponent(ids);
       });
 
       document.body.appendChild(bar);

@@ -159,6 +159,11 @@
   .check-row input:checked + .check-box svg{ opacity:1; transform:scale(1); }
   .check-row span{ font-size:13.5px; color:rgba(255,255,255,0.55); line-height:1.5; }
   .check-row a{ color:var(--white); font-weight:700; text-decoration:underline; }
+  .check-row.field-error .check-box{ border-color:#E5766B; }
+
+  .field-shell.field-error{ border-color:#E5766B; box-shadow:0 0 0 3px rgba(229,118,107,0.12); }
+  .form-error{ display:none; font-size:12px; color:#E5766B; margin:-8px 0 14px; line-height:1.5; }
+  .form-error.show{ display:block; }
 
   @media (max-width:400px){
     .auth-heading{ font-size:26px; }
@@ -242,21 +247,23 @@
       </div>
 
       <div class="check-group">
-        <label class="check-row">
-          <input type="checkbox" id="humanCheck" required>
+        <label class="check-row" id="humanCheckRow">
+          <input type="checkbox" id="humanCheck">
           <span class="check-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
           <span>I confirm that I am human</span>
         </label>
-        <label class="check-row">
-          <input type="checkbox" id="privacyCheck" required>
+        <label class="check-row" id="privacyCheckRow">
+          <input type="checkbox" id="privacyCheck">
           <span class="check-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </span>
           <span>I agree to the <a href="#">Privacy Policy</a> and <a href="#">Terms of Service</a></span>
         </label>
       </div>
+
+      <p class="form-error" id="formError"></p>
 
       <button type="submit" class="login-btn">Sign Up</button>
 
@@ -301,10 +308,49 @@
 
   document.getElementById('signupForm').addEventListener('submit', function(e){
     e.preventDefault();
+
+    var errorEl = document.getElementById('formError');
+    var errors = [];
+
+    var firstName = document.getElementById('firstName');
+    var lastName = document.getElementById('lastName');
+    var email = document.getElementById('email');
+    var contactNo = document.getElementById('contactNo');
+    var password = document.getElementById('password');
+    var confirmPassword = document.getElementById('confirmPassword');
+    var humanCheck = document.getElementById('humanCheck');
+    var privacyCheck = document.getElementById('privacyCheck');
+    var humanRow = document.getElementById('humanCheckRow');
+    var privacyRow = document.getElementById('privacyCheckRow');
+
+    // Reset error states
+    [firstName, lastName, email, contactNo, password, confirmPassword].forEach(function(input){
+      input.closest('.field-shell').classList.remove('field-error');
+    });
+    humanRow.classList.remove('field-error');
+    privacyRow.classList.remove('field-error');
+
+    if(!firstName.value.trim()){ errors.push('First name is required.'); firstName.closest('.field-shell').classList.add('field-error'); }
+    if(!lastName.value.trim()){ errors.push('Last name is required.'); lastName.closest('.field-shell').classList.add('field-error'); }
+    if(!email.value.trim()){ errors.push('Email is required.'); email.closest('.field-shell').classList.add('field-error'); }
+    if(!contactNo.value.trim()){ errors.push('Contact number is required.'); contactNo.closest('.field-shell').classList.add('field-error'); }
+    if(!password.value){ errors.push('Password is required.'); password.closest('.field-shell').classList.add('field-error'); }
+    if(password.value && password.value.length < 6){ errors.push('Password must be at least 6 characters.'); password.closest('.field-shell').classList.add('field-error'); }
+    if(confirmPassword.value !== password.value || !confirmPassword.value){ errors.push('Passwords do not match.'); confirmPassword.closest('.field-shell').classList.add('field-error'); }
+    if(!humanCheck.checked){ errors.push('Please confirm you are human.'); humanRow.classList.add('field-error'); }
+    if(!privacyCheck.checked){ errors.push('Please agree to the Privacy Policy and Terms of Service.'); privacyRow.classList.add('field-error'); }
+
+    if(errors.length){
+      errorEl.textContent = errors[0];
+      errorEl.classList.add('show');
+      return;
+    }
+
+    errorEl.classList.remove('show');
+
     // Demo: send the new user to email OTP verification, then back to Log In.
-    var email = document.getElementById('email').value || '';
     var url = 'otp-verification.html?next=login.html';
-    if(email){ url += '&to=' + encodeURIComponent(email); }
+    if(email.value){ url += '&to=' + encodeURIComponent(email.value); }
     window.location.href = url;
   });
 </script>
