@@ -1227,6 +1227,669 @@
 </div>
 
 <script>
+  // ===================================================================
+  // Header icon panels (search / notifications / profile / cart / nav)
+  // are mutually exclusive: opening one closes whichever other was open.
+  // ===================================================================
+  window.__headerPanel = (function(){
+    var closers = {};
+    var active = null;
+    return {
+      register: function(name, closeFn){ closers[name] = closeFn; },
+      open: function(name){
+        if(active && active !== name && closers[active]) closers[active]();
+        active = name;
+      },
+      closed: function(name){ if(active === name) active = null; }
+    };
+  })();
+
+  function openNavMenu(){
+    document.getElementById('expandMenu').classList.add('open');
+    document.getElementById('menuOverlay').classList.add('open');
+    var b = document.querySelector('.menu-btn'); if(b) b.setAttribute('aria-expanded', 'true');
+    window.__headerPanel.open('nav');
+  }
+  function closeNavMenu(){
+    document.getElementById('expandMenu').classList.remove('open');
+    document.getElementById('menuOverlay').classList.remove('open');
+    var b = document.querySelector('.menu-btn'); if(b) b.setAttribute('aria-expanded', 'false');
+    window.__headerPanel.closed('nav');
+  }
+  function toggleMenu(btn){
+    var expanded = btn.getAttribute('aria-expanded') === 'true';
+    expanded ? closeNavMenu() : openNavMenu();
+  }
+  window.__headerPanel.register('nav', closeNavMenu);
+  document.getElementById('menuOverlay').addEventListener('click', closeNavMenu);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && document.getElementById('expandMenu').classList.contains('open')) closeNavMenu();
+  });
+
+  // ===================================================================
+  // Nav accordion: Collection / Brands / Corporate Purchase.
+  // Opening one automatically collapses whichever other section was open.
+  // ===================================================================
+  (function(){
+    var heads = document.querySelectorAll('.menu-accordion-head');
+    heads.forEach(function(head){
+      head.addEventListener('click', function(){
+        var targetId = head.getAttribute('data-acc-target');
+        var body = document.getElementById(targetId);
+        var isOpen = head.getAttribute('aria-expanded') === 'true';
+
+        // Collapse every section first
+        heads.forEach(function(h){
+          h.setAttribute('aria-expanded', 'false');
+          var b = document.getElementById(h.getAttribute('data-acc-target'));
+          if(b) b.style.maxHeight = null;
+        });
+
+        // Re-open the clicked one, unless it was already open (toggle closed)
+        if(!isOpen){
+          head.setAttribute('aria-expanded', 'true');
+          body.style.maxHeight = body.scrollHeight + 'px';
+        }
+      });
+    });
+  })();
+
+  // ===================================================================
+  // Nested sub-accordion: Categories -> Men's Wear / Women's Wear /
+  // Footwear / Accessories, each expanding to its own subcategories.
+  // Opening one collapses any other subcategory list that was open,
+  // and the parent "Categories" panel reflows so nothing gets clipped.
+  // ===================================================================
+  (function(){
+    var subHeads = document.querySelectorAll('.menu-subaccordion-head');
+    subHeads.forEach(function(head){
+      head.addEventListener('click', function(e){
+        e.stopPropagation();
+        var targetId = head.getAttribute('data-sub-target');
+        var body = document.getElementById(targetId);
+        var isOpen = head.getAttribute('aria-expanded') === 'true';
+        var group = head.closest('.menu-accordion-body-inner');
+
+        group.querySelectorAll('.menu-subaccordion-head').forEach(function(h){
+          h.setAttribute('aria-expanded', 'false');
+          var b = document.getElementById(h.getAttribute('data-sub-target'));
+          if(b) b.style.maxHeight = null;
+        });
+
+        if(!isOpen){
+          head.setAttribute('aria-expanded', 'true');
+          body.style.maxHeight = body.scrollHeight + 'px';
+        }
+
+        // Reflow the ancestor top-level accordion body so the extra
+        // height from the opened/closed subcategory list isn't clipped.
+        var parentBody = head.closest('.menu-accordion-body');
+        if(parentBody && parentBody.style.maxHeight){
+          requestAnimationFrame(function(){
+            parentBody.style.maxHeight = parentBody.scrollHeight + 'px';
+          });
+        }
+      });
+    });
+  })();
+
+  // ===================================================================
+  // Profile icon behaviour:
+  //   - Logged OUT -> clicking the icon goes straight to login.html
+  //   - Logged IN  -> clicking the icon opens the account dropdown
+  //
+  // Replace `isLoggedIn` below with a real check against your session/
+  // auth state (a cookie, a server-rendered flag, an API call, etc).
+  // For quickly previewing both states in this demo, add ?loggedin=1
+  // to the URL to see the dropdown, or leave it off to see the login
+  // redirect.
+  // ===================================================================
+  (function(){
+    var qpLoggedIn = new URLSearchParams(window.location.search).get('loggedin') === '1';
+    var lsLoggedIn = localStorage.getItem('demoLoggedIn') === '1';
+    var isLoggedIn = qpLoggedIn || lsLoggedIn;
+
+    var profileBtn = document.getElementById('profileBtn');
+    var dropdown = document.getElementById('profileDropdown');
+    var logoutBtn = document.getElementById('logoutBtn');
+    var demoToggle = document.getElementById('demoLoginToggle');
+
+    function refreshDemoToggle(){
+      if(demoToggle) demoToggle.textContent = isLoggedIn ? 'Demo: Logged In (tap to log out)' : 'Demo: Logged Out (tap to log in)';
+    }
+    refreshDemoToggle();
+    if(demoToggle){
+      demoToggle.addEventListener('click', function(){
+        localStorage.setItem('demoLoggedIn', isLoggedIn ? '0' : '1');
+        window.location.reload();
+      });
+    }
+
+    function closeDropdown(){
+      dropdown.classList.remove('open');
+      profileBtn.setAttribute('aria-expanded', 'false');
+      window.__headerPanel.closed('profile');
+    }
+    window.__headerPanel.register('profile', closeDropdown);
+
+    profileBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+
+      if(!isLoggedIn){
+        window.location.href = 'login.html';
+        return;
+      }
+
+      var willOpen = !dropdown.classList.contains('open');
+      if(willOpen) window.__headerPanel.open('profile');
+      dropdown.classList.toggle('open', willOpen);
+      profileBtn.setAttribute('aria-expanded', String(willOpen));
+    });
+
+    // Close the dropdown on outside click / Escape
+    document.addEventListener('click', function(e){
+      if(!dropdown.contains(e.target) && e.target !== profileBtn){
+        closeDropdown();
+      }
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') closeDropdown();
+    });
+
+    // Log Out -> clear the (demo) session and return to the login page
+    logoutBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      isLoggedIn = false;
+      localStorage.setItem('demoLoggedIn', '0');
+      closeDropdown();
+      window.location.href = 'login.html';
+    });
+  })();
+
+  // ===================================================================
+  // Notification bell: hang-tag dropdown with Read All / Clear All,
+  // per-item Read / Ignore, and a small popup with the full description.
+  //
+  // NOTIFICATIONS below is a demo feed standing in for real admin-panel
+  // events (order status changes, quote updates, newsletter posts,
+  // etc). Wire it up to your backend/websocket and the render/read/
+  // ignore/clear logic below keeps working unchanged.
+  // ===================================================================
+  (function(){
+    // Category -> banner icon (drawn on the modal's dark gradient banner)
+    var ICONS = {
+      order:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>',
+      quote:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h6v-6H6.5A2.5 2.5 0 0 1 4 10.5v-1A2.5 2.5 0 0 1 6.5 7H8"/><path d="M14 19h6v-6h-3.5A2.5 2.5 0 0 1 14 10.5v-1A2.5 2.5 0 0 1 16.5 7H18"/></svg>',
+      news:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v5h5"/><path d="M4 13h4"/><path d="M4 17h4"/></svg>',
+      payment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>'
+    };
+    var DEFAULT_VISIBLE = 4;
+    var expanded = false;
+
+    var NOTIFICATIONS = [
+      { id:1, unread:true,  cat:'order', title:'Order #10432 Shipped', time:'2h ago',
+        snippet:'Your order has been shipped and is on its way.',
+        desc:'Your order #10432 has been shipped via Sundarban Courier and is expected to arrive within 2-3 business days. You can track the shipment anytime from the My Orders section.',
+        link:'my-orders.html?order=10432', cta:'Track Order' },
+      { id:2, unread:true,  cat:'quote', title:'Quote #Q-2291 Approved', time:'5h ago',
+        snippet:'Your custom quote request has been approved by admin.',
+        desc:'Your custom quote request Q-2291 for a 40-piece corporate order has been approved and priced at ৳86,000. Please review and confirm the quote to proceed with production.',
+        link:'my-carts.html?quote=Q-2291', cta:'Review Quote' },
+      { id:3, unread:true,  cat:'news', title:'New Newsletter: July Rider Drop', time:'1d ago',
+        snippet:'The July Rider Collection is now live with launch pricing.',
+        desc:'The Millennial Clothing July Rider Collection is now live — new riding jackets, gloves and boots are up to 20% off for the first 100 orders. Check the Shop page before the offer ends.',
+        link:'shop.html?collection=july-rider', cta:'Shop the Drop' },
+      { id:4, unread:false, cat:'order', title:'Order #10410 Delivered', time:'2d ago',
+        snippet:'Your order was marked as delivered by admin.',
+        desc:'Order #10410 has been marked as delivered. We hope you enjoy your new gear! If anything needs attention, reach out from the My Orders section and our team will help.',
+        link:'my-orders.html?order=10410', cta:'View Order' },
+      { id:5, unread:false, cat:'quote', title:'Quote #Q-2287 Price Updated', time:'3d ago',
+        snippet:'Admin updated the pricing on your quote after a material change.',
+        desc:'Admin has updated the pricing on quote Q-2287 following a material change. The new total is ৳54,200. Please review the updated quote in My Carts before it expires.',
+        link:'my-carts.html?quote=Q-2287', cta:'Review Quote' },
+      { id:6, unread:false, cat:'payment', title:'Payment Reminder — Order #10432', time:'4d ago',
+        snippet:'An invoice for your order is due in 3 days.',
+        desc:'An invoice for order #10432 is due in 3 days. Please complete payment from the My Orders section to avoid delays in processing and shipping.',
+        link:'my-orders.html?order=10432&action=pay', cta:'Pay Invoice' }
+    ];
+
+    var wrap = document.getElementById('notifWrap');
+    var toggleBtn = document.getElementById('notifToggleBtn');
+    var dropdown = document.getElementById('notifDropdown');
+    var badge = document.getElementById('notifBadge');
+    var list = document.getElementById('notifList');
+    var emptyState = document.getElementById('notifEmpty');
+    var readAllBtn = document.getElementById('notifReadAllBtn');
+    var clearAllBtn = document.getElementById('notifClearAllBtn');
+
+    var modalOverlay = document.getElementById('notifModalOverlay');
+    var modalBanner = document.getElementById('notifModalBanner');
+    var modalTitle = document.getElementById('notifModalTitle');
+    var modalTime = document.getElementById('notifModalTime');
+    var modalDesc = document.getElementById('notifModalDesc');
+    var modalCta = document.getElementById('notifModalCta');
+    var modalCloseBtn = document.getElementById('notifModalCloseBtn');
+
+    function updateBadge(){
+      badge.style.display = NOTIFICATIONS.some(function(n){ return n.unread; }) ? 'block' : 'none';
+    }
+
+    function render(){
+      list.innerHTML = '';
+      emptyState.style.display = NOTIFICATIONS.length ? 'none' : 'block';
+
+      // Default view shows only the first 4 notifications; "View all" reveals the rest.
+      var visible = expanded ? NOTIFICATIONS : NOTIFICATIONS.slice(0, DEFAULT_VISIBLE);
+
+      visible.forEach(function(n){
+        var item = document.createElement('div');
+        item.className = 'notif-item' + (n.unread ? ' unread' : '');
+        item.innerHTML =
+          '<span class="notif-item-dot"></span>' +
+          '<div class="notif-item-body">' +
+            '<div class="notif-item-top">' +
+              '<div class="notif-item-title"></div>' +
+              '<div class="notif-item-time"></div>' +
+            '</div>' +
+            '<div class="notif-item-snippet"></div>' +
+            '<div class="notif-item-actions">' +
+              '<button type="button" class="notif-action-link notif-toggle-btn"></button>' +
+              '<button type="button" class="notif-action-link notif-ignore-btn">Remove</button>' +
+            '</div>' +
+          '</div>';
+        item.querySelector('.notif-item-title').textContent = n.title;
+        item.querySelector('.notif-item-snippet').textContent = n.snippet;
+        item.querySelector('.notif-item-time').textContent = n.time;
+
+        // Unread items show "Read" (opens the detail popup and marks read).
+        // Already-read items show "Unread" (toggles the state back).
+        var toggleBtnEl = item.querySelector('.notif-toggle-btn');
+        toggleBtnEl.textContent = n.unread ? 'Read' : 'Unread';
+        toggleBtnEl.classList.toggle('notif-read-link', n.unread);
+        toggleBtnEl.addEventListener('click', function(e){
+          e.stopPropagation();
+          if(n.unread){
+            n.unread = false;
+            updateBadge();
+            render();
+            openModal(n);
+          } else {
+            n.unread = true;
+            updateBadge();
+            render();
+          }
+        });
+
+        item.querySelector('.notif-ignore-btn').addEventListener('click', function(e){
+          e.stopPropagation();
+          NOTIFICATIONS = NOTIFICATIONS.filter(function(x){ return x.id !== n.id; });
+          updateBadge();
+          render();
+        });
+
+        // Clicking the card body itself also opens the detail popup.
+        item.addEventListener('click', function(){
+          if(n.unread){ n.unread = false; updateBadge(); render(); }
+          openModal(n);
+        });
+
+        list.appendChild(item);
+      });
+
+      // "View all" / "Show less" toggle when there are more than the default 4.
+      var existingViewAll = document.getElementById('notifViewAllBtn');
+      if(existingViewAll) existingViewAll.remove();
+      if(NOTIFICATIONS.length > DEFAULT_VISIBLE){
+        var viewAllBtn = document.createElement('button');
+        viewAllBtn.type = 'button';
+        viewAllBtn.id = 'notifViewAllBtn';
+        viewAllBtn.className = 'notif-viewall';
+        viewAllBtn.textContent = expanded ? 'Show less' : 'View all (' + NOTIFICATIONS.length + ')';
+        viewAllBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          expanded = !expanded;
+          render();
+        });
+        list.parentNode.insertBefore(viewAllBtn, emptyState);
+      }
+    }
+
+    function openModal(n){
+      modalBanner.innerHTML = '<button type="button" class="notif-modal-close" id="notifModalCloseBtn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' + (ICONS[n.cat] || ICONS.order);
+      document.getElementById('notifModalCloseBtn').addEventListener('click', closeModal);
+      modalTitle.textContent = n.title;
+      modalTime.textContent = n.time;
+      modalDesc.textContent = n.desc;
+      modalCta.textContent = n.cta || 'View Details';
+      modalCta.href = n.link || '#';
+      modalOverlay.classList.add('open');
+    }
+    function closeModal(){
+      modalOverlay.classList.remove('open');
+    }
+
+    function positionDropdown(){
+      var margin = 12;
+      var naturalWidth = Math.min(322, window.innerWidth - margin * 2);
+      var wrapRect = wrap.getBoundingClientRect();
+      // Would a right-anchored panel of this width run past the LEFT edge?
+      var wouldOverflowLeft = (wrapRect.right - naturalWidth) < margin;
+
+      dropdown.classList.toggle('mobile-fixed', wouldOverflowLeft);
+
+      if(wouldOverflowLeft){
+        var headerEl = document.querySelector('header');
+        var headerRect = headerEl.getBoundingClientRect();
+        dropdown.style.top = (headerRect.bottom + 8) + 'px';
+      } else {
+        dropdown.style.top = '';
+      }
+    }
+
+    function openDropdown(){
+      window.__headerPanel.open('notif');
+      positionDropdown();
+      dropdown.classList.add('open');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+    }
+    function closeDropdown(){
+      dropdown.classList.remove('open');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      window.__headerPanel.closed('notif');
+    }
+    window.__headerPanel.register('notif', closeDropdown);
+
+    window.addEventListener('resize', function(){
+      if(dropdown.classList.contains('open')) positionDropdown();
+    });
+
+    toggleBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var willOpen = !dropdown.classList.contains('open');
+      willOpen ? openDropdown() : closeDropdown();
+    });
+
+    readAllBtn.addEventListener('click', function(){
+      NOTIFICATIONS.forEach(function(n){ n.unread = false; });
+      updateBadge();
+      render();
+    });
+    clearAllBtn.addEventListener('click', function(){
+      NOTIFICATIONS = [];
+      updateBadge();
+      render();
+    });
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', function(e){
+      if(e.target === modalOverlay) closeModal();
+    });
+
+    document.addEventListener('click', function(e){
+      if(!wrap.contains(e.target)) closeDropdown();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape'){
+        if(modalOverlay.classList.contains('open')) closeModal();
+        else closeDropdown();
+      }
+    });
+
+    render();
+    updateBadge();
+  })();
+
+  // ===================================================================
+  // Site-wide search: keyword suggestions + "≥50% keyword match" results
+  //
+  // PRODUCTS below is a demo catalog standing in for your real product
+  // feed / API. Wire `PRODUCTS` up to your backend (or fetch it) and
+  // everything else — matching, suggestions, results — keeps working.
+  //
+  // Matching rule: the query is split into words; each query word is
+  // scored 0–1 against the product's name/category/tags (1 = exact or
+  // substring match, partial credit for close/typo'd words via a
+  // character-similarity check). A product is a match when its AVERAGE
+  // word score is 50% or higher — i.e. "keyword 50% miley" (matches).
+  // ===================================================================
+  (function(){
+    var PRODUCTS = [
+      { name:'Rider Racing Jacket',        cat:'Outerwear',   price:'৳4,200', tags:'jacket riding biker leather racing armor' },
+      { name:'Adventure Touring Backpack', cat:'Bags',        price:'৳2,850', tags:'backpack travel bag adventure touring rucksack' },
+      { name:'Classic Biker Gloves',       cat:'Accessories', price:'৳1,150', tags:'gloves biker riding leather hand protection' },
+      { name:'Explorer Cargo Pants',       cat:'Bottoms',     price:'৳2,100', tags:'pants cargo travel utility trouser' },
+      { name:'Road Trip Graphic Tee',      cat:'Tops',        price:'৳850',   tags:'tshirt graphic casual shirt tee' },
+      { name:'Highway Denim Jacket',       cat:'Outerwear',   price:'৳3,400', tags:'jacket denim casual outer coat' },
+      { name:'Trailblazer Hiking Boots',   cat:'Footwear',    price:'৳3,900', tags:'boots hiking travel shoes footwear trail' },
+      { name:'Nomad Canvas Duffel Bag',    cat:'Bags',        price:'৳2,300', tags:'bag duffel travel canvas luggage' },
+      { name:'Motorcycle Riding Helmet',   cat:'Accessories', price:'৳5,600', tags:'helmet biker safety riding motorcycle head' },
+      { name:'Wanderer Flannel Shirt',     cat:'Tops',        price:'৳1,650', tags:'shirt flannel casual travel top' },
+      { name:'Cruiser Leather Vest',       cat:'Outerwear',   price:'৳3,750', tags:'vest leather biker sleeveless outer' },
+      { name:'Voyager Travel Wallet',      cat:'Accessories', price:'৳980',   tags:'wallet travel leather card accessory' }
+    ];
+    var POPULAR = ['Jacket', 'Boots', 'Backpack', 'Gloves', 'Helmet'];
+
+    function norm(s){ return (s || '').toLowerCase().trim(); }
+
+    // Character-level similarity (0–1) between two short words, for typo tolerance
+    function wordSimilarity(a, b){
+      if(!a || !b) return 0;
+      if(a === b) return 1;
+      if(b.indexOf(a) !== -1 || a.indexOf(b) !== -1) return 1;
+      var la = a.length, lb = b.length;
+      var dist = new Array(lb + 1);
+      for(var j = 0; j <= lb; j++) dist[j] = j;
+      for(var i = 1; i <= la; i++){
+        var prev = dist[0];
+        dist[0] = i;
+        for(var k = 1; k <= lb; k++){
+          var tmp = dist[k];
+          dist[k] = a[i-1] === b[k-1] ? prev : 1 + Math.min(prev, dist[k], dist[k-1]);
+          prev = tmp;
+        }
+      }
+      return 1 - (dist[lb] / Math.max(la, lb));
+    }
+
+    // Score a product 0–1 against the query (average best-word-match across query terms)
+    function scoreProduct(query, product){
+      var haystack = norm(product.name + ' ' + product.cat + ' ' + product.tags);
+      if(haystack.indexOf(query) !== -1) return 1;
+      var qWords = query.split(/\s+/).filter(Boolean);
+      var pWords = haystack.split(/\s+/).filter(Boolean);
+      if(!qWords.length) return 0;
+      var total = 0;
+      qWords.forEach(function(qw){
+        var best = 0;
+        pWords.forEach(function(pw){
+          var s = wordSimilarity(qw, pw);
+          if(s > best) best = s;
+        });
+        total += best;
+      });
+      return total / qWords.length;
+    }
+
+    function getMatches(query){
+      query = norm(query);
+      if(!query) return [];
+      return PRODUCTS
+        .map(function(p){ return { product:p, score:scoreProduct(query, p) }; })
+        .filter(function(m){ return m.score >= 0.5; })  // ≥50% keyword match
+        .sort(function(a,b){ return b.score - a.score; });
+    }
+
+    function highlight(name, query){
+      var idx = name.toLowerCase().indexOf(query.toLowerCase());
+      if(idx === -1) return name;
+      return name.slice(0, idx) + '<mark>' + name.slice(idx, idx + query.length) + '</mark>' + name.slice(idx + query.length);
+    }
+
+    var toggleBtn = document.getElementById('searchToggleBtn');
+    var panel = document.getElementById('searchPanel');
+    var input = document.getElementById('searchInput');
+    var inputWrap = document.getElementById('searchInputWrap');
+    var clearBtn = document.getElementById('searchClearBtn');
+    var goBtn = document.getElementById('searchGoBtn');
+    var closeBtn = document.getElementById('searchCloseBtn');
+    var popularWrap = document.getElementById('searchPopular');
+    var suggestList = document.getElementById('searchSuggestList');
+    var resultsPage = document.getElementById('searchResultsPage');
+    var srpTitle = document.getElementById('srpTitle');
+    var srpBody = document.getElementById('srpBody');
+    var srpBackBtn = document.getElementById('srpBackBtn');
+
+    POPULAR.forEach(function(term){
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'search-chip';
+      chip.textContent = term;
+      chip.addEventListener('click', function(){
+        input.value = term;
+        renderSuggestions(term);
+        openResultsPage(term);
+      });
+      popularWrap.appendChild(chip);
+    });
+
+    // A single "product view" row: Thumbnail | Title | View Details button
+    function productViewRow(product, query){
+      var row = document.createElement('div');
+      row.className = 'product-view-item';
+      row.innerHTML =
+        '<span class="product-view-thumb"></span>' +
+        '<span class="product-view-title">' + highlight(product.name, query) + '</span>';
+      var viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'product-view-btn';
+      viewBtn.textContent = 'View Details';
+      viewBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        // Demo hook: replace with e.g. window.location.href = '/product/' + product.slug
+        openResultsPage(product.name, [{ product: product, score: 1 }], product.name);
+      });
+      row.appendChild(viewBtn);
+      return row;
+    }
+
+    // Live keyword suggestions dropdown (still on the search panel, not the new page)
+    function renderSuggestions(query){
+      query = norm(query);
+      suggestList.innerHTML = '';
+      if(!query) return;
+      var matches = getMatches(query).slice(0, 6);
+      matches.forEach(function(m){
+        suggestList.appendChild(productViewRow(m.product, query));
+      });
+    }
+
+    // Full "product view" results — rendered onto the new page
+    function renderResultsPage(matches, query){
+      srpBody.innerHTML = '';
+      if(!matches.length){
+        srpBody.innerHTML = '<div class="search-empty">No products matched "' + query + '". Try a different keyword.</div>';
+        return;
+      }
+      matches.forEach(function(m){
+        srpBody.appendChild(productViewRow(m.product, query));
+      });
+    }
+
+    // Opens the dedicated full-page "product view" results screen
+    function openResultsPage(query, precomputedMatches, titleOverride){
+      query = norm(query);
+      var matches = precomputedMatches || getMatches(query);
+      srpTitle.textContent = titleOverride ? titleOverride : (matches.length + ' result' + (matches.length === 1 ? '' : 's') + ' for "' + query + '"');
+      renderResultsPage(matches, query);
+      resultsPage.classList.add('open');
+    }
+    function closeResultsPage(){
+      resultsPage.classList.remove('open');
+    }
+
+    function handleInput(){
+      var query = norm(input.value);
+      inputWrap.classList.toggle('has-value', query.length > 0);
+      popularWrap.style.display = query ? 'none' : 'flex';
+      renderSuggestions(query);
+    }
+
+    function openPanel(){
+      window.__headerPanel.open('search');
+      panel.classList.add('open');
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      setTimeout(function(){ input.focus(); }, 150);
+    }
+    function closePanel(){
+      panel.classList.remove('open');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      window.__headerPanel.closed('search');
+    }
+    window.__headerPanel.register('search', closePanel);
+
+    toggleBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var willOpen = !panel.classList.contains('open');
+      willOpen ? openPanel() : closePanel();
+    });
+    closeBtn.addEventListener('click', closePanel);
+
+    clearBtn.addEventListener('click', function(){
+      input.value = '';
+      handleInput();
+      input.focus();
+    });
+
+    // Live keyword suggestions as the user types
+    input.addEventListener('input', handleInput);
+
+    // Search icon (after the search bar) -> opens the full "product view" results page
+    goBtn.addEventListener('click', function(){
+      if(norm(input.value)) openResultsPage(input.value);
+    });
+
+    // Enter does the same as clicking the search icon
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        if(norm(input.value)) openResultsPage(input.value);
+      }
+    });
+
+    srpBackBtn.addEventListener('click', closeResultsPage);
+
+    document.addEventListener('click', function(e){
+      if(!panel.contains(e.target) && e.target !== toggleBtn && !toggleBtn.contains(e.target)){
+        closePanel();
+      }
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape'){
+        if(resultsPage.classList.contains('open')) closeResultsPage();
+        else closePanel();
+      }
+    });
+  })();
+</script>
+
+
+<!-- ===== CART DRAWER ===== -->
+<div class="cart-drawer-overlay" id="cartOverlay"></div>
+<div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-label="Cart">
+  <div class="cart-drawer-head">
+    <div class="cart-drawer-title">Cart</div>
+    <div class="cart-drawer-hdr-actions">
+      <button type="button" class="cart-drawer-hdr-btn" id="cdDeleteSelBtn" disabled>Delete Sel.</button>
+      <button type="button" class="cart-drawer-hdr-btn" id="cdDeleteAllBtn">Delete All</button>
+      <button type="button" class="cart-drawer-close" id="cartCloseBtn" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="cart-drawer-body" id="cdBody"></div>
+</div>
+
+<script>
 /* ===== CART DRAWER LOGIC ===== */
 (function(){
   var CURRENCY = '৳';
@@ -1347,8 +2010,7 @@
   }
 })();
 </script>
-<!-- ========== /SHARED HEADER ========== -->
-<main class="page">
+<!-- ========== /SHARED HEADER ========== --><main class="page">
 
   <!-- Hero -->
   <div class="hero">
@@ -1775,12 +2437,12 @@
     font-family:var(--font-body);
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
-    padding:32px 0 60px;
   }
+  .footer-demo-preview{ padding:32px 0 60px; }
   a{color:inherit; text-decoration:none;}
   img{max-width:100%; display:block;}
 
-  .page-wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  .footer-page-wrap{ max-width:1180px; margin:0 auto; padding:0 20px; }
   .demo-note{ max-width:1180px; margin:0 auto 24px; padding:0 24px; color:var(--steel); font-size:14px; line-height:1.6; }
   .demo-note code{ font-family:var(--font-mono); background:var(--canvas-2); padding:2px 6px; border-radius:3px; }
 
@@ -2130,7 +2792,7 @@
 
 </style>
 <div style="background:var(--canvas, #ECECEE); padding:0 0 0 0;">
-<div class="page-wrap">
+<div class="footer-page-wrap">
 <section class="store-section">
   <div class="svc-header">
     <span class="svc-eyebrow">Shop With Us</span>

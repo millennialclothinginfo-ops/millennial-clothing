@@ -22,13 +22,17 @@ header_src = read(os.path.join(SRC_DIR, 'header.html'))
 # CSS (everything inside <style>...</style>)
 header_css = re.search(r'<style>(.*?)</style>', header_src, re.S).group(1)
 
-# Body block: from <body> up to (but not including) the demo-note
-body_content = header_src[header_src.index('<body>') + 6 : header_src.index('<div class="demo-note">')]
-
 # Cart drawer script block
 cart_script_start = header_src.index('\n<script>\n/* ===== CART DRAWER LOGIC')
 cart_script_end   = header_src.index('</body>')
 cart_script = header_src[cart_script_start:cart_script_end].strip()
+
+# Body block: from <body> up to the cart drawer script (this includes the
+# icon-panel logic script — search/notifications/profile/menu — which sits
+# AFTER the demo-note div in the source file). The demo-note itself is
+# stripped out separately below, so it never leaks into real pages.
+body_content = header_src[header_src.index('<body>') + 6 : cart_script_start]
+body_content = re.sub(r'<div class="demo-note">.*?</div>\s*', '', body_content, count=1, flags=re.S)
 
 # Header JS (everything between </style> and </head>)
 head_scripts_m = re.search(r'</style>(.*?)</head>', header_src, re.S)
@@ -49,7 +53,8 @@ HEADER_INJECT = f"""<!-- ========== SHARED HEADER — auto-injected by build.py 
 # ─── Extract footer block ────────────────────────────────────────────────────
 footer_src = read(os.path.join(SRC_DIR, 'Footer.html'))
 footer_css = re.search(r'<style>(.*?)</style>', footer_src, re.S).group(1)
-footer_body = footer_src[footer_src.index('<body>') + 6 : footer_src.index('</body>')]
+footer_body_start = re.search(r'<body[^>]*>', footer_src).end()
+footer_body = footer_src[footer_body_start : footer_src.index('</body>')]
 # Strip leading demo-note div
 footer_body = re.sub(r'<div class="demo-note">.*?</div>\s*', '', footer_body, flags=re.S)
 
